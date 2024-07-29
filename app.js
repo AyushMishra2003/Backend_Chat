@@ -1,13 +1,13 @@
-import express from 'express';
-import http from 'http';
-import { Server } from 'socket.io';
-import mongoose from 'mongoose';
-import cors from 'cors';
+import express from "express";
+import http from "http";
+import { Server } from "socket.io";
+import mongoose from "mongoose";
+import cors from "cors";
 
 // Import models
-import User from './model/user.model.js';
-import Message from './model/message.model.js';
-import userroute from './routes/user.routes.js';
+import User from "./model/user.model.js";
+import Message from "./model/message.model.js";
+import userroute from "./routes/user.routes.js";
 
 // Create an Express application
 const app = express();
@@ -17,8 +17,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.get('/', (req, res) => {
-  res.send('Welcome to the chat server');
+app.get("/", (req, res) => {
+  res.send("Welcome to the chat server");
 });
 
 app.use("/api/v1", userroute);
@@ -27,15 +27,16 @@ app.use("/api/v1", userroute);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
-    methods: ["GET", "POST"]
-  }
+    // origin: "http://localhost:5173",
+    origin: "https://webayushchat.netlify.app/",
+    methods: ["GET", "POST"],
+  },
 });
 
-io.on('connection', (socket) => {
+io.on("connection", (socket) => {
   console.log(`User Connected: ${socket.id}`);
 
-  socket.on('establish_connection', async ({ sender, recipient }) => {
+  socket.on("establish_connection", async ({ sender, recipient }) => {
     try {
       const senderExists = await User.findOne({ username: sender });
       const recipientExists = await User.findOne({ username: recipient });
@@ -44,38 +45,41 @@ io.on('connection', (socket) => {
         socket.join(sender);
         socket.join(recipient);
 
-        socket.emit('connection_established', { success: true, message: `Connected to ${recipient}` });
+        socket.emit("connection_established", {
+          success: true,
+          message: `Connected to ${recipient}`,
+        });
 
         const messages = await Message.find({
           $or: [
             { sender, recipient },
-            { sender: recipient, recipient: sender }
-          ]
-        }).sort('timestamp');
-        socket.emit('message_history', messages);
+            { sender: recipient, recipient: sender },
+          ],
+        }).sort("timestamp");
+        socket.emit("message_history", messages);
       } else {
-        socket.emit('error', 'Sender or recipient does not exist');
+        socket.emit("error", "Sender or recipient does not exist");
       }
     } catch (error) {
-      console.error('Error in establishing connection:', error);
-      socket.emit('error', 'Internal Server Error');
+      console.error("Error in establishing connection:", error);
+      socket.emit("error", "Internal Server Error");
     }
   });
 
-  socket.on('send_message', async ({ sender, recipient, content }) => {
+  socket.on("send_message", async ({ sender, recipient, content }) => {
     try {
       const message = new Message({ sender, recipient, content });
       await message.save();
 
       // Emit the message only once to both sender and recipient
-      io.to(sender).emit('receive_message', message);
-      io.to(recipient).emit('receive_message', message);
+      io.to(sender).emit("receive_message", message);
+      io.to(recipient).emit("receive_message", message);
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error("Error sending message:", error);
     }
   });
 
-  socket.on('disconnect', () => {
+  socket.on("disconnect", () => {
     console.log(`User Disconnected: ${socket.id}`);
   });
 });
