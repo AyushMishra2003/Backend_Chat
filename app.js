@@ -27,8 +27,8 @@ app.use("/api/v1", userroute);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
-    // origin: "https://webayushchat.netlify.app/",
+    // origin: "http://localhost:5173",
+    origin: "https://webayushchat.netlify.app/",
     methods: ["GET", "POST"],
   },
 });
